@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DoC Ansi Item Builder</title>
+        <link rel="shortcut icon" href="https://cdn.discordapp.com/attachments/902223703385993216/1286292086592766044/logo.png?ex=66f69adb&is=66f5495b&hm=c35cdb27ba5f2cac27067131fba2f8862b8ed12aa1cadbddda85c10408c1b073&" type="image/x-icon">
+        <style>
+            * {
+                color: white;
+            }
+
+            body, input, select, option, button, textarea {
+                background-color: #222222;
+            }
+
+            .DoC_border {
+                border: 20px solid transparent;
+                border-image: url('https://cdn.discordapp.com/attachments/902223703385993216/1288942510848086100/doc_window_border.png?ex=66f704c1&is=66f5b341&hm=23c0e88afd19bd66742a933bac24351b69e84c6e0a0bed80ae84e3720dda7b54&') 30 30 30 30 repeat;
+            }
+
+            .container {
+                position: absolute;
+                width: 1440px;
+                height: calc(100% - 200px);
+                left: calc((100% - 1440px) / 2);
+                top: calc(200px / 2);
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .item-builder {
+                padding: 20px;
+                height: 100%;
+                width: calc(100% - 40px);
+                background-color: black;
+            }
+
+            .btn {
+                height: 50px;
+                width: 200px;
+            }
+
+            .remove-btn {
+                height: 20px;
+                width: 20px;
+            }
+
+            .result {
+                height: 200px;
+                width: 500px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container DoC_border">
+            <div class="item-builder">
+                <h1>Item Builder</h1>
+                <h2>
+                    Item Type
+                    <select id="type">
+                        <option value="rod">Rod</option>
+                        <option value="sickle">Sickle</option>
+                        <option value="pickaxe">Pickaxe</option>
+                        <option value="axe">Axe</option>
+                    </select>
+                </h2>
+                <h2>
+                    Item Rarity
+                    <select id="rarity">
+                        <option value="common">Common</option>
+                        <option value="uncommon">Uncommon</option>
+                        <option value="rare">Rare</option>
+                        <option value="epic">Epic</option>
+                        <option value="legendary">Legendary</option>
+                    </select>
+                </h2>
+                <h2>
+                    Craft Bonus
+                    <select id="craft-bonus-choice" onchange="addCraftBonus(this.value)">
+                        <option disabled selected value> -- select an option -- </option>
+                        <option value="harvest_multiplier">Harvest Multiplier</option>
+                        <option value="drop_multiplier">Drop Multiplier</option>
+                        <option value="luck">Luck</option>
+                    </select>
+                </h2>
+                <ul id="craft-bonus-list">
+
+                </ul>
+                <button onclick="generate()" class="btn">GENERATE</button>
+                <button onclick="copy()" class="btn">COPY TO CLIPBOARD</button>
+                <br>
+                <textarea id="result" class="result" cols="99999" rows="99999"></textarea>
+            </div>
+        </div>
+        <script>
+            function addCraftBonus(bonus) {
+                document.getElementById('craft-bonus-choice').getElementsByTagName('option')[0].selected = 'selected';
+                if (document.getElementById('craft-bonus-list').querySelector(`#${bonus}`) != null) return;
+                let craftBonus = document.createElement('li');
+                craftBonus.id = bonus;
+                let craftBonusName = document.createElement('h2');
+                let craftBonusRemoveBtn = document.createElement('button');
+                craftBonusRemoveBtn.className = 'remove-btn'
+                craftBonusRemoveBtn.innerHTML = 'X'
+                craftBonusRemoveBtn.setAttribute('onclick', `removeCraftBonus('${bonus}')`);
+                craftBonusName.appendChild(craftBonusRemoveBtn);
+                craftBonusName.innerHTML += pretty_name(bonus) + '<br>';
+                let craftBonusRarity = document.createElement('select');
+                let rarities;
+                switch (bonus) {
+                    case 'harvest_multiplier':
+                        rarities = {
+                            "common": 0.1,
+                            "uncommon": 0.15,
+                            "rare": 0.2,
+                            "epic": 0.25,
+                            "legendary": 0.3
+                        }
+                        break;
+                    case 'drop_multiplier':
+                        rarities = {
+                            "common": 0.03,
+                            "uncommon": 0.07,
+                            "rare": 0.12,
+                            "epic": 0.16,
+                            "legendary": 0.2
+                        }
+                        break;
+                    case 'luck':
+                        rarities = {
+                            "common": 0.03,
+                            "uncommon": 0.07,
+                            "rare": 0.12,
+                            "epic": 0.16,
+                            "legendary": 0.2
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                for (const [rarity, value] of Object.entries(rarities)) {
+                    let option = document.createElement('option');
+                    option.value = rarity;
+                    option.innerHTML = `${'+' + (value * 100).toFixed(0) + '%'} ${rarity.toUpperCase()}`;
+                    craftBonusRarity.appendChild(option);
+                }
+                craftBonusName.appendChild(craftBonusRarity);
+                craftBonus.appendChild(craftBonusName);
+                document.getElementById('craft-bonus-list').appendChild(craftBonus);
+            }
+
+            function removeCraftBonus(bonus) {
+                document.getElementById(bonus).remove();
+            }
+
+            function generate() {
+                let rarity = document.getElementById('rarity').value;
+                let type = document.getElementById('type').value;
+                let result = [];
+                result.push('```ansi');
+                result.push('[0;40m                                          [0m');
+                result.push(`[0;40m   [1;${color(rarity)}m${rarity.toUpperCase()} ${type.toUpperCase()}${' '.repeat(42 - 4 - rarity.length - type.length)}[0m`);
+                Array.from(document.getElementById('craft-bonus-list').children).forEach((craftBonus) => {
+                    let bonusId = craftBonus.id;
+                    let bonusRarity = craftBonus.getElementsByTagName('h2')[0].getElementsByTagName('select')[0].value;
+                    let bonusValue = craftBonus.getElementsByTagName('h2')[0].getElementsByTagName('select')[0].querySelector(`option[value=${bonusRarity}]`).innerHTML.split(' ')[0];
+                    result.push(`[0;40m     [1;37m${pretty_name(bonusId).toUpperCase()}${' '.repeat(28 - 5 - pretty_name(bonusId).length - bonusValue.length)}[1;32m${bonusValue} [1;${color(bonusRarity)}m${bonusRarity.toUpperCase()}${' '.repeat(13 - bonusRarity.length)}`);
+                }); /* 28 */
+                result.push('[0;40m                                          [0m');
+                result.push('```');
+                document.getElementById('result').value = result.join('\n');
+            }
+            function copy() {
+                var copyText = document.getElementById('result');
+                copyText.select();
+                copyText.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(copyText.value);
+            }
+
+            function color(rarity) {
+                switch (rarity) {
+                    case 'common':
+                        return '37';
+                        break;
+                    case 'uncommon':
+                        return '32';
+                        break;
+                    case 'rare':
+                        return '34';
+                        break;
+                    case 'epic':
+                        return '35';
+                        break;
+                    case 'legendary':
+                        return '33';
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            function pretty_name(str) {
+                let result = '';
+                str.toLowerCase().split('_').forEach(word => {
+                    result += ' ' + word.charAt(0).toUpperCase() + word.slice(1);
+                });
+                return result.slice(1);
+            }
+        </script>
+    </body>
+</html>
